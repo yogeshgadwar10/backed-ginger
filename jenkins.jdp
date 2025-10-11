@@ -1,0 +1,51 @@
+pipeline{
+    agent any git branch: 
+    stages {
+      stage ('PULL'){           
+       steps{
+             'dev', url: 'https://github.com/yogeshgadwar10/backed-ginger.git'
+            }
+        }
+       stage ('BUILD'){           
+       steps{
+             sh 'mvn clean package'
+            }
+        }
+       stage ('TEST'){           
+       steps{
+             withSonarQubeEnv(installationName: 'sonar' , credentialsId: 'sonar-creden') {
+                mvn sonar:sonar -Dsonar.projectKey=ginger-backend
+             // some block
+             }
+             
+            }
+        }
+       stage ('QUALITY-GATE'){         
+       steps {
+               {
+                  // some block
+                  timeout(activity: true, time: 10) {
+                    waitForQualityGate abortPipeline: false, credentialsId: 'sonar-cred'
+                     // some block           
+                     }
+}
+            }
+        }
+       stage ('DOCKER-BUILD'){           
+       steps {
+               sh 'docker . -t yogeshgadwar/genger-reservation-app:latest'
+             }
+        }
+       stage ('DOCKER-PUSH'){           
+       steps {
+              sh 'docker push . -t yogeshgadwar/genger-reservation-app:latest'
+            }
+        }
+       stage ('DEPLOY'){           
+       steps {
+              sh 'kubctl apply -f ymal/'
+            }
+        }
+
+    }
+}
